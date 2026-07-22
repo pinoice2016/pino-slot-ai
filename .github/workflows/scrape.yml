@@ -4,9 +4,9 @@ on:
 
   schedule:
 
-    - cron: "0 * * * *"
-
-  workflow_dispatch:
+    - cron: "0 20 * * * "   # JST 5:00
+    
+    workflow_dispatch:
 
 jobs:
 
