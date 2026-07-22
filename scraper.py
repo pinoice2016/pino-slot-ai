@@ -69,3 +69,49 @@ soup = BeautifulSoup(
     "lxml"
 
 )
+
+articles = []
+
+for a in soup.select("article"):
+
+    link = a.find("a", href=True)
+
+    if not link:
+
+        continue
+
+    title = link.get_text(strip=True)
+
+    url = link["href"]
+
+    date = ""
+
+    time_tag = a.find("time")
+
+    if time_tag:
+
+        date = time_tag.get_text(strip=True)
+
+    articles.append([date, title, url])
+
+print(f"{len(articles)} 件取得")
+
+if len(articles) == 0:
+
+    raise Exception("記事が取得できませんでした")
+
+sheet.clear()
+
+sheet.append_row([
+
+    "日付",
+
+    "タイトル",
+
+    "URL"
+
+])
+
+sheet.append_rows(articles)
+
+print("保存完了")
