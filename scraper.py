@@ -10,11 +10,11 @@ import json
 
 import os
 
-# =========================
+# -------------------------------
 
 # Google Sheets
 
-# =========================
+# -------------------------------
 
 SCOPES = [
 
@@ -28,29 +28,31 @@ creds = Credentials.from_service_account_info(
 
     json.loads(os.environ["GOOGLE_CREDENTIALS"]),
 
-    scopes=SCOPES,
+    scopes=SCOPES
 
 )
 
 gc = gspread.authorize(creds)
 
-spreadsheet = gc.open_by_key(os.environ["SPREADSHEET_ID"])
+sheet = gc.open_by_key(
 
-sheet = spreadsheet.worksheet("データ収集")
+    os.environ["SPREADSHEET_ID"]
 
-# =========================
+).worksheet("データ収集")
 
-# 対象URL
+# -------------------------------
 
-# =========================
+# 対象店舗
+
+# -------------------------------
 
 URL = "https://min-repo.com/2958667/"
 
-# =========================
+# -------------------------------
 
 # Playwright
 
-# =========================
+# -------------------------------
 
 with sync_playwright() as p:
 
@@ -62,9 +64,9 @@ with sync_playwright() as p:
 
             "--no-sandbox",
 
-            "--disable-dev-shm-usage",
+            "--disable-dev-shm-usage"
 
-        ],
+        ]
 
     )
 
@@ -72,94 +74,68 @@ with sync_playwright() as p:
 
         viewport={"width": 1400, "height": 3000},
 
-        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+        user_agent="Mozilla/5.0"
 
     )
 
-    print("アクセス開始")
+    print("店舗ページへアクセス")
 
-    page.goto(
+    page.goto(URL, wait_until="networkidle", timeout=60000)
 
-        URL,
+    page.wait_for_timeout(3000)
 
-        wait_until="networkidle",
-
-        timeout=60000,
-
-    )
-
-    page.wait_for_timeout(5000)
-
-    print("URL =", page.url)
-
-    print("TITLE =", page.title())
+    print(page.title())
 
     html = page.content()
 
-    print("HTMLサイズ =", len(html))
-
-    page.screenshot(path="page.png", full_page=True)
-
     browser.close()
 
-# =========================
-
-# HTML保存
-
-# =========================
-
-with open("page.html", "w", encoding="utf-8") as f:
-
-    f.write(html)
-
-# =========================
+# -------------------------------
 
 # HTML解析
 
-# =========================
+# -------------------------------
 
 soup = BeautifulSoup(html, "lxml")
 
-rows = []
+report_url = ""
 
 for a in soup.find_all("a", href=True):
 
     text = a.get_text(strip=True)
 
-    href = a.get("href")
+    if "パチンコレポート一覧" in text:
 
-    if not href:
+        report_url = a["href"]
 
-        continue
+        break
 
-    rows.append([
+print("レポート一覧URL")
 
-        text,
+print(report_url)
 
-        href,
+# -------------------------------
 
-    ])
+# 保存
 
-print("リンク数 =", len(rows))
-
-# =========================
-
-# スプレッドシート保存
-
-# =========================
+# -------------------------------
 
 sheet.clear()
 
 sheet.append_row([
 
-    "タイトル",
+    "店舗",
 
-    "URL",
+    "レポート一覧URL"
 
 ])
 
-if rows:
+sheet.append_row([
 
-    sheet.append_rows(rows)
+    "オーギヤDO",
+
+    report_url
+
+])
 
 print("保存完了")
