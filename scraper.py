@@ -132,4 +132,4 @@ if articles:
 
     sheet.append_rows(articles)
 
-print("保存完了")print("保存完了")
+print("保存完了")
