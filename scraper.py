@@ -8,11 +8,11 @@ import json
 
 import os
 
-# -------------------------------
+# -----------------------------
 
 # Google Sheets
 
-# -------------------------------
+# -----------------------------
 
 SCOPES = [
 
@@ -38,19 +38,7 @@ sheet = gc.open_by_key(
 
 ).worksheet("データ収集")
 
-# -------------------------------
-
-# 店舗ページ
-
-# -------------------------------
-
 URL = "https://min-repo.com/2958667/"
-
-# -------------------------------
-
-# Playwright
-
-# -------------------------------
 
 with sync_playwright() as p:
 
@@ -64,17 +52,11 @@ with sync_playwright() as p:
 
             "--disable-dev-shm-usage",
 
-        ],
+        ]
 
     )
 
-    page = browser.new_page(
-
-        viewport={"width": 1400, "height": 3000},
-
-        user_agent="Mozilla/5.0"
-
-    )
+    page = browser.new_page()
 
     print("店舗ページへアクセス")
 
@@ -94,49 +76,45 @@ with sync_playwright() as p:
 
     print("リンク検索開始")
 
-    report_url = ""
+    links = page.locator("a").evaluate_all("""
 
-    links = page.locator("a").all()
+els => els.map(e => ({
+
+    text: e.innerText,
+
+    href: e.href
+
+}))
+
+""")
+
+    report_url = ""
 
     for link in links:
 
-        try:
+        text = link["text"]
 
-            text = link.inner_text().strip()
+        href = link["href"]
 
-            href = link.get_attribute("href")
+        if "レポート" in text:
 
-            if text:
+            print(text)
 
-                print(text)
+            print(href)
 
-            if href:
+        if "パチンコレポート一覧" in text:
 
-                print("  →", href)
+            report_url = href
 
-            if "レポート一覧" in text:
+        elif "スロットレポート一覧" in text:
 
-                report_url = href
-
-                break
-
-        except:
-
-            pass
-
-    print("")
-
-    print("レポート一覧URL")
-
-    print(report_url)
+            report_url = href
 
     browser.close()
 
-# -------------------------------
+print("レポート一覧URL")
 
-# 保存
-
-# -------------------------------
+print(report_url)
 
 sheet.clear()
 
