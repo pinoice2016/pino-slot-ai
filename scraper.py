@@ -42,7 +42,7 @@ sheet = spreadsheet.worksheet("データ収集")
 
 # 対象URL
 
-URL = "https://min-repo.com/tag/%E3%82%AA%E3%83%BC%E3%82%AE%E3%82%B9/"
+URL = "https://min-repo.com/tag/オーギヤdo/"
 
 with sync_playwright() as p:
 
