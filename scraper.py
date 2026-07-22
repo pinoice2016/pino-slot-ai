@@ -28,7 +28,7 @@ creds = Credentials.from_service_account_info(
 
     json.loads(os.environ["GOOGLE_CREDENTIALS"]),
 
-    scopes=SCOPES
+    scopes=SCOPES,
 
 )
 
@@ -64,9 +64,9 @@ with sync_playwright() as p:
 
             "--no-sandbox",
 
-            "--disable-dev-shm-usage"
+            "--disable-dev-shm-usage",
 
-        ]
+        ],
 
     )
 
@@ -74,7 +74,7 @@ with sync_playwright() as p:
 
         viewport={"width": 1400, "height": 3000},
 
-        user_agent="Mozilla/5.0"
+        user_agent="Mozilla/5.0",
 
     )
 
@@ -86,7 +86,7 @@ with sync_playwright() as p:
 
         wait_until="networkidle",
 
-        timeout=60000
+        timeout=60000,
 
     )
 
@@ -94,9 +94,7 @@ with sync_playwright() as p:
 
     print(page.title())
 
-    html = page.content()
-
-    soup = BeautifulSoup(html, "lxml")
+    soup = BeautifulSoup(page.content(), "lxml")
 
     report_url = ""
 
@@ -106,11 +104,9 @@ with sync_playwright() as p:
 
         text = a.get_text(" ", strip=True)
 
-        href = a["href"]
-
         if "過去レポート一覧" in text:
 
-            report_url = href
+            report_url = a["href"]
 
             if report_url.startswith("/"):
 
@@ -124,17 +120,11 @@ with sync_playwright() as p:
 
     if report_url == "":
 
-        print("レポート一覧が見つかりません")
+        print("見つかりません")
 
         browser.close()
 
         exit()
-
-    # ==========================
-
-    # レポート一覧へ移動
-
-    # ==========================
 
     print("レポート一覧へアクセス")
 
@@ -144,7 +134,7 @@ with sync_playwright() as p:
 
         wait_until="networkidle",
 
-        timeout=60000
+        timeout=60000,
 
     )
 
@@ -152,43 +142,55 @@ with sync_playwright() as p:
 
     print(page.title())
 
+    # ===============================
+
+    # HTML保存
+
+    # ===============================
+
     html = page.content()
 
-    browser.close()
+    with open("report.html", "w", encoding="utf-8") as f:
 
-# ===============================
+        f.write(html)
 
-# HTML解析
+    page.screenshot(
 
-# ===============================
+        path="report.png",
 
-soup = BeautifulSoup(html, "lxml")
+        full_page=True,
 
-reports = []
+    )
 
-print("営業日一覧取得")
+    soup = BeautifulSoup(html, "lxml")
 
-for a in soup.find_all("a", href=True):
+    reports = []
 
-    text = a.get_text(" ", strip=True)
+    print("営業日一覧取得")
 
-    href = a["href"]
+    for a in soup.find_all("a", href=True):
 
-    if "オーギヤDO" in text:
+        text = a.get_text(" ", strip=True)
+
+        href = a["href"]
 
         if href.startswith("/"):
 
             href = "https://min-repo.com" + href
 
-        reports.append([
+        if "/2" in href:
 
-            text,
+            reports.append([
 
-            href
+                text,
 
-        ])
+                href,
 
-print("取得件数:", len(reports))
+            ])
+
+    print("取得件数:", len(reports))
+
+    browser.close()
 
 # ===============================
 
@@ -200,9 +202,9 @@ sheet.clear()
 
 sheet.append_row([
 
-    "営業日",
+    "タイトル",
 
-    "URL"
+    "URL",
 
 ])
 
