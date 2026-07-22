@@ -47,3 +47,17 @@ jobs:
         run: |
         
           python scraper.py
+
+          - name: Run scraper
+
+  run: python scraper.py
+
+- name: Upload HTML
+
+  uses: actions/upload-artifact@v4
+
+  with:
+
+    name: page-html
+
+    path: page.html
