@@ -10,11 +10,11 @@ import json
 
 import os
 
-# ===============================
+# ==================================
 
 # Google Sheets
 
-# ===============================
+# ==================================
 
 SCOPES = [
 
@@ -40,19 +40,19 @@ sheet = gc.open_by_key(
 
 ).worksheet("データ収集")
 
-# ===============================
+# ==================================
 
 # 店舗URL
 
-# ===============================
+# ==================================
 
 STORE_URL = "https://min-repo.com/2958667/"
 
-# ===============================
+# ==================================
 
 # Playwright
 
-# ===============================
+# ==================================
 
 with sync_playwright() as p:
 
@@ -94,79 +94,37 @@ with sync_playwright() as p:
 
     print(page.title())
 
-    soup = BeautifulSoup(page.content(), "lxml")
+    # ==================================
 
-    report_url = ""
+    # 店舗ページ保存
 
-    print("リンク検索開始")
-
-    for a in soup.find_all("a", href=True):
-
-        text = a.get_text(" ", strip=True)
-
-        if "過去レポート一覧" in text:
-
-            report_url = a["href"]
-
-            if report_url.startswith("/"):
-
-                report_url = "https://min-repo.com" + report_url
-
-            break
-
-    print("レポート一覧URL")
-
-    print(report_url)
-
-    if report_url == "":
-
-        print("見つかりません")
-
-        browser.close()
-
-        exit()
-
-    print("レポート一覧へアクセス")
-
-    page.goto(
-
-        report_url,
-
-        wait_until="networkidle",
-
-        timeout=60000,
-
-    )
-
-    page.wait_for_timeout(5000)
-
-    print(page.title())
-
-    # ===============================
-
-    # HTML保存
-
-    # ===============================
+    # ==================================
 
     html = page.content()
 
-    with open("report.html", "w", encoding="utf-8") as f:
+    with open("store.html", "w", encoding="utf-8") as f:
 
         f.write(html)
 
     page.screenshot(
 
-        path="report.png",
+        path="store.png",
 
         full_page=True,
 
     )
 
+    print("店舗ページ保存完了")
+
+    # ==================================
+
+    # HTML解析
+
+    # ==================================
+
     soup = BeautifulSoup(html, "lxml")
 
-    reports = []
-
-    print("営業日一覧取得")
+    print("ページ内リンク一覧")
 
     for a in soup.find_all("a", href=True):
 
@@ -174,42 +132,32 @@ with sync_playwright() as p:
 
         href = a["href"]
 
-        if href.startswith("/"):
+        print("----------------------------")
 
-            href = "https://min-repo.com" + href
+        print("TEXT =", text)
 
-        if "/2" in href:
-
-            reports.append([
-
-                text,
-
-                href,
-
-            ])
-
-    print("取得件数:", len(reports))
+        print("HREF =", href)
 
     browser.close()
 
-# ===============================
+# ==================================
 
-# Google Sheets保存
+# Google Sheets
 
-# ===============================
+# ==================================
 
 sheet.clear()
 
 sheet.append_row([
 
-    "タイトル",
-
-    "URL",
+    "確認",
 
 ])
 
-if reports:
+sheet.append_row([
 
-    sheet.append_rows(reports)
+    "store.html を保存しました",
+
+])
 
 print("保存完了")
