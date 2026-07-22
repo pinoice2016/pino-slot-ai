@@ -36,51 +36,57 @@ spreadsheet = gc.open_by_key(
 
 )
 
-# シート名
-
 sheet = spreadsheet.worksheet("データ収集")
 
 URL = "https://min-repo.com/tag/%E3%82%AA%E3%83%BC%E3%82%AE%E3%82%B9/"
 
 with sync_playwright() as p:
 
-    browser = p.chromium.launch(headless=True)
+    browser = p.chromium.launch(
 
-    page = browser.new_page()
+        headless=True
+
+    )
+
+    page = browser.new_page(
+
+        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
+
+    )
 
     page.goto(
 
         URL,
 
-        wait_until="domcontentloaded",
+        wait_until="networkidle",
 
         timeout=60000
 
     )
 
-    html = page.content()
+    # JavaScript読み込み待ち
 
-    # HTML保存
+    page.wait_for_timeout(5000)
+
+    print("現在のURL:", page.url)
+
+    html = page.content()
 
     with open("page.html", "w", encoding="utf-8") as f:
 
         f.write(html)
 
-    # HTML先頭をログ出力
-
     print(html[:5000])
 
     browser.close()
-
-# HTML解析
 
 soup = BeautifulSoup(html, "lxml")
 
 articles = []
 
-for a in soup.select("article"):
+for article in soup.select("article"):
 
-    link = a.find("a", href=True)
+    link = article.find("a", href=True)
 
     if not link:
 
@@ -92,13 +98,21 @@ for a in soup.select("article"):
 
     date = ""
 
-    t = a.find("time")
+    t = article.find("time")
 
     if t:
 
         date = t.get_text(strip=True)
 
-    articles.append([date, title, url])
+    articles.append([
+
+        date,
+
+        title,
+
+        url
+
+    ])
 
 print(f"{len(articles)}件取得")
 
@@ -118,4 +132,4 @@ if articles:
 
     sheet.append_rows(articles)
 
-print("保存完了")
+print("保存完了")print("保存完了")
