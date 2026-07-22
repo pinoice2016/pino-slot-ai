@@ -48,16 +48,15 @@ with sync_playwright() as p:
 
     )
 
-    page = browser.new_page()
+page.goto(
 
-    page.goto(
+    URL,
 
-        URL,
+    wait_until="domcontentloaded",
 
-        wait_until="networkidle"
+    timeout=60000
 
-    )
-
+)
     html = page.content()
 
     browser.close()
