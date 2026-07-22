@@ -30,6 +30,4 @@ jobs:
 
       - run: |
 
-          python scraper.py      - run: |
-
           python scraper.py
