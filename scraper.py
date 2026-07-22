@@ -82,7 +82,9 @@ with sync_playwright() as p:
 
     page.goto(URL, wait_until="networkidle", timeout=60000)
 
-    page.wait_for_timeout(3000)
+    page.wait_for_timeout(5000)
+
+    print("タイトル")
 
     print(page.title())
 
@@ -98,25 +100,31 @@ with sync_playwright() as p:
 
 soup = BeautifulSoup(html, "lxml")
 
-report_url = ""
+print("=" * 60)
+
+print("ページ内リンク一覧")
+
+print("=" * 60)
+
+links = []
 
 for a in soup.find_all("a", href=True):
 
-    text = a.get_text(strip=True)
+    text = a.get_text(" ", strip=True)
 
-    if "パチンコレポート一覧" in text:
+    href = a["href"]
 
-        report_url = a["href"]
+    print(text)
 
-        break
+    print(href)
 
-print("レポート一覧URL")
+    print("--------------------")
 
-print(report_url)
+    links.append([text, href])
 
 # -------------------------------
 
-# 保存
+# スプレッドシート保存
 
 # -------------------------------
 
@@ -124,18 +132,14 @@ sheet.clear()
 
 sheet.append_row([
 
-    "店舗",
+    "リンク名",
 
-    "レポート一覧URL"
-
-])
-
-sheet.append_row([
-
-    "オーギヤDO",
-
-    report_url
+    "URL"
 
 ])
 
-print("保存完了")
+if links:
+
+    sheet.append_rows(links)
+
+print(f"{len(links)}件保存完了")
