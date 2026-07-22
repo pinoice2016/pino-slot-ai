@@ -48,13 +48,13 @@ with sync_playwright() as p:
 
     )
 
-page.goto(
+　　page.goto(
 
-    URL,
+   　　 URL,
 
-    wait_until="domcontentloaded",
+    　　wait_until="domcontentloaded",
 
-    timeout=60000
+    　　timeout=60000
 
 )
     html = page.content()
