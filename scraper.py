@@ -14,7 +14,7 @@ SCOPES = [
 
     "https://www.googleapis.com/auth/spreadsheets",
 
-    "https://www.googleapis.com/auth/drive"
+    "https://www.googleapis.com/auth/drive",
 
 ]
 
@@ -36,39 +36,33 @@ spreadsheet = gc.open_by_key(
 
 )
 
+# シート名を自分のスプレッドシートに合わせる
+
 sheet = spreadsheet.worksheet("データ収集")
 
-URL = "https://min-repo.com/tag/%E3%82%AA%E3%83%BC%E3%82%AE%E3%83%A4do/"
+URL = "https://min-repo.com/tag/%E3%82%AA%E3%83%BC%E3%82%AE%E3%82%B9/"
 
 with sync_playwright() as p:
 
-    browser = p.chromium.launch(
+    browser = p.chromium.launch(headless=True)
 
-        headless=True
+    page = browser.new_page()
+
+    page.goto(
+
+        URL,
+
+        wait_until="domcontentloaded",
+
+        timeout=60000
 
     )
 
-　　page.goto(
+    html = page.content()
 
-    URL,
+    browser.close()
 
-    wait_until="domcontentloaded",
-
-    timeout=60000
-
-)
-
-html = page.content()
-
-browser.close()
-
-soup = BeautifulSoup(
-
-    html,
-
-    "lxml"
-
-)
+soup = BeautifulSoup(html, "lxml")
 
 articles = []
 
@@ -86,19 +80,15 @@ for a in soup.select("article"):
 
     date = ""
 
-    time_tag = a.find("time")
+    t = a.find("time")
 
-    if time_tag:
+    if t:
 
-        date = time_tag.get_text(strip=True)
+        date = t.get_text(strip=True)
 
     articles.append([date, title, url])
 
-print(f"{len(articles)} 件取得")
-
-if len(articles) == 0:
-
-    raise Exception("記事が取得できませんでした")
+print(f"{len(articles)}件取得")
 
 sheet.clear()
 
@@ -112,6 +102,8 @@ sheet.append_row([
 
 ])
 
-sheet.append_rows(articles)
+if articles:
+
+    sheet.append_rows(articles)
 
 print("保存完了")
