@@ -12,7 +12,7 @@ import os
 
 # ==========================
 
-# Google認証
+# Google Sheets設定
 
 # ==========================
 
@@ -20,7 +20,7 @@ SCOPES = [
 
     "https://www.googleapis.com/auth/spreadsheets",
 
-    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/drive"
 
 ]
 
@@ -28,27 +28,25 @@ creds = Credentials.from_service_account_info(
 
     json.loads(os.environ["GOOGLE_CREDENTIALS"]),
 
-    scopes=SCOPES,
+    scopes=SCOPES
 
 )
 
 gc = gspread.authorize(creds)
 
-spreadsheet = gc.open_by_key(
+spreadsheet = gc.open_by_key(os.environ["SPREADSHEET_ID"])
 
-    os.environ["SPREADSHEET_ID"]
-
-)
+# シート名は存在するものを使用
 
 sheet = spreadsheet.worksheet("データ収集")
 
 # ==========================
 
-# 対象URL
+# URL
 
 # ==========================
 
-URL = "https://min-repo.com/tag/%E3%82%AA%E3%83%BC%E3%82%AE%E3%83%A4do/"
+URL = "https://min-repo.com/tag/オーギヤdo/"
 
 # ==========================
 
@@ -58,29 +56,53 @@ URL = "https://min-repo.com/tag/%E3%82%AA%E3%83%BC%E3%82%AE%E3%83%A4do/"
 
 with sync_playwright() as p:
 
-    browser = p.chromium.launch(headless=True)
+    browser = p.chromium.launch(
 
-    page = browser.new_page(
-
-        viewport={"width": 1400, "height": 2000},
-
-        user_agent="Mozilla/5.0"
+        headless=True
 
     )
 
-    page.goto(URL, wait_until="networkidle", timeout=60000)
+    page = browser.new_page(
+
+        viewport={"width": 1400, "height": 2500},
+
+        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/138.0 Safari/537.36"
+
+    )
+
+    print("ページへアクセス")
+
+    page.goto(
+
+        URL,
+
+        wait_until="domcontentloaded",
+
+        timeout=60000
+
+    )
 
     page.wait_for_timeout(5000)
 
-    html = page.content()
-
-    print("取得URL :", page.url)
+    print("現在URL :", page.url)
 
     print("タイトル :", page.title())
+
+    html = page.content()
 
     print("HTMLサイズ :", len(html))
 
     browser.close()
+
+# ==========================
+
+# HTML保存
+
+# ==========================
+
+with open("page.html", "w", encoding="utf-8") as f:
+
+    f.write(html)
 
 # ==========================
 
@@ -92,59 +114,25 @@ soup = BeautifulSoup(html, "lxml")
 
 rows = []
 
-# 全リンクを調査
-
 for a in soup.find_all("a", href=True):
+
+    text = a.get_text(" ", strip=True)
 
     href = a["href"]
 
-    text = a.get_text(strip=True)
+    rows.append([
 
-    # min-repoの記事だけ取得
+        text,
 
-    if href.startswith("https://min-repo.com/"):
+        href
 
-        # タグやカテゴリ除外
+    ])
 
-        if "/tag/" in href:
-
-            continue
-
-        if "/category/" in href:
-
-            continue
-
-        if text == "":
-
-            continue
-
-        rows.append([
-
-            text,
-
-            href
-
-        ])
-
-# 重複削除
-
-unique = []
-
-seen = set()
-
-for r in rows:
-
-    if r[1] not in seen:
-
-        seen.add(r[1])
-
-        unique.append(r)
-
-print("取得件数:", len(unique))
+print("リンク数 :", len(rows))
 
 # ==========================
 
-# スプレッドシート保存
+# Sheets保存
 
 # ==========================
 
@@ -152,14 +140,14 @@ sheet.clear()
 
 sheet.append_row([
 
-    "店舗名",
+    "タイトル",
 
     "URL"
 
 ])
 
-if unique:
+if rows:
 
-    sheet.append_rows(unique)
+    sheet.append_rows(rows)
 
 print("保存完了")
