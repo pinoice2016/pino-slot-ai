@@ -1,7 +1,5 @@
 from playwright.sync_api import sync_playwright
 
-from bs4 import BeautifulSoup
-
 import gspread
 
 from google.oauth2.service_account import Credentials
@@ -10,11 +8,11 @@ import json
 
 import os
 
-# ----------------------------------------
+# -------------------------------
 
 # Google Sheets
 
-# ----------------------------------------
+# -------------------------------
 
 SCOPES = [
 
@@ -28,7 +26,7 @@ creds = Credentials.from_service_account_info(
 
     json.loads(os.environ["GOOGLE_CREDENTIALS"]),
 
-    scopes=SCOPES,
+    scopes=SCOPES
 
 )
 
@@ -40,19 +38,19 @@ sheet = gc.open_by_key(
 
 ).worksheet("データ収集")
 
-# ----------------------------------------
+# -------------------------------
 
-# 店舗URL
+# 店舗ページ
 
-# ----------------------------------------
+# -------------------------------
 
-STORE_URL = "https://min-repo.com/2958667/"
+URL = "https://min-repo.com/2958667/"
 
-# ----------------------------------------
+# -------------------------------
 
-# Playwright開始
+# Playwright
 
-# ----------------------------------------
+# -------------------------------
 
 with sync_playwright() as p:
 
@@ -74,7 +72,7 @@ with sync_playwright() as p:
 
         viewport={"width": 1400, "height": 3000},
 
-        user_agent="Mozilla/5.0",
+        user_agent="Mozilla/5.0"
 
     )
 
@@ -82,11 +80,11 @@ with sync_playwright() as p:
 
     page.goto(
 
-        STORE_URL,
+        URL,
 
         wait_until="domcontentloaded",
 
-        timeout=60000,
+        timeout=120000
 
     )
 
@@ -94,110 +92,68 @@ with sync_playwright() as p:
 
     print(page.title())
 
-    html = page.content()
-
-    # ------------------------------------
-
-    # レポート一覧URL取得
-
-    # ------------------------------------
-
-    soup = BeautifulSoup(html, "lxml")
+    print("リンク検索開始")
 
     report_url = ""
 
-    print("リンク検索開始")
+    links = page.locator("a").all()
 
-    for a in soup.find_all("a", href=True):
+    for link in links:
 
-        text = a.get_text(" ", strip=True)
+        try:
 
-        if "パチンコレポート一覧" in text:
+            text = link.inner_text().strip()
 
-            report_url = a["href"]
+            href = link.get_attribute("href")
 
-            break
+            if text:
+
+                print(text)
+
+            if href:
+
+                print("  →", href)
+
+            if "レポート一覧" in text:
+
+                report_url = href
+
+                break
+
+        except:
+
+            pass
+
+    print("")
 
     print("レポート一覧URL")
 
     print(report_url)
 
-    # URLが相対パスなら絶対URLへ変換
-
-    if report_url.startswith("/"):
-
-        report_url = "https://min-repo.com" + report_url
-
-    # ------------------------------------
-
-    # レポート一覧ページ
-
-    # ------------------------------------
-
-    rows = []
-
-    if report_url != "":
-
-        print("レポート一覧へアクセス")
-
-        page.goto(
-
-            report_url,
-
-            wait_until="domcontentloaded",
-
-            timeout=60000,
-
-        )
-
-        page.wait_for_timeout(5000)
-
-        print(page.title())
-
-        html = page.content()
-
-        soup = BeautifulSoup(html, "lxml")
-
-        print("営業日一覧取得")
-
-        links = soup.find_all("a", href=True)
-
-        for link in links:
-
-            href = link.get("href", "")
-
-            text = link.get_text(" ", strip=True)
-
-            if "/report/" in href:
-
-                if href.startswith("/"):
-
-                    href = "https://min-repo.com" + href
-
-                rows.append([text, href])
-
-        print("取得件数:", len(rows))
-
     browser.close()
 
-# ----------------------------------------
+# -------------------------------
 
-# Google Sheets保存
+# 保存
 
-# ----------------------------------------
+# -------------------------------
 
 sheet.clear()
 
 sheet.append_row([
 
-    "営業日",
+    "店舗",
 
-    "URL",
+    "レポート一覧URL"
 
 ])
 
-if rows:
+sheet.append_row([
 
-    sheet.append_rows(rows)
+    "オーギヤDO",
+
+    report_url
+
+])
 
 print("保存完了")
