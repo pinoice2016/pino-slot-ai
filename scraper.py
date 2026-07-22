@@ -107,13 +107,3 @@ if articles:
     sheet.append_rows(articles)
 
 print("保存完了")
-
-- name: Upload HTML
-
-  uses: actions/upload-artifact@v4
-
-  with:
-
-    name: page-html
-
-    path: page.html
