@@ -38,7 +38,19 @@ sheet = gc.open_by_key(
 
 ).worksheet("データ収集")
 
+# -----------------------------
+
+# 対象ページ
+
+# -----------------------------
+
 URL = "https://min-repo.com/2958667/"
+
+# -----------------------------
+
+# Playwright
+
+# -----------------------------
 
 with sync_playwright() as p:
 
@@ -70,51 +82,73 @@ with sync_playwright() as p:
 
     )
 
-    page.wait_for_timeout(5000)
+    page.wait_for_timeout(8000)
 
     print(page.title())
 
-    print("リンク検索開始")
+    print("フレーム一覧")
 
-    links = page.locator("a").evaluate_all("""
+    for frame in page.frames:
 
-els => els.map(e => ({
-
-    text: e.innerText,
-
-    href: e.href
-
-}))
-
-""")
+        print(frame.url)
 
     report_url = ""
 
-    for link in links:
+    print("リンク検索開始")
 
-        text = link["text"]
+    for frame in page.frames:
 
-        href = link["href"]
+        try:
 
-        if "レポート" in text:
+            links = frame.locator("a").evaluate_all("""
 
-            print(text)
+                els => els.map(e => ({
 
-            print(href)
+                    text: e.innerText,
 
-        if "パチンコレポート一覧" in text:
+                    href: e.href
 
-            report_url = href
+                }))
 
-        elif "スロットレポート一覧" in text:
+            """)
 
-            report_url = href
+            for link in links:
+
+                text = link["text"].strip()
+
+                href = link["href"]
+
+                if text:
+
+                    print(text)
+
+                if href:
+
+                    print(href)
+
+                if "パチンコレポート一覧" in text:
+
+                    report_url = href
+
+                elif "スロットレポート一覧" in text:
+
+                    report_url = href
+
+        except Exception as e:
+
+            print("フレーム読込失敗:", e)
 
     browser.close()
 
 print("レポート一覧URL")
 
 print(report_url)
+
+# -----------------------------
+
+# Google Sheetsへ保存
+
+# -----------------------------
 
 sheet.clear()
 
