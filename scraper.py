@@ -10,11 +10,11 @@ import json
 
 import os
 
-# ----------------------------
+# ----------------------------------------
 
 # Google Sheets
 
-# ----------------------------
+# ----------------------------------------
 
 SCOPES = [
 
@@ -40,21 +40,19 @@ sheet = gc.open_by_key(
 
 ).worksheet("データ収集")
 
-# ----------------------------
+# ----------------------------------------
 
-# 対象店舗
+# 店舗URL
 
-# ----------------------------
-
-STORE_NAME = "オーギヤDO"
+# ----------------------------------------
 
 STORE_URL = "https://min-repo.com/2958667/"
 
-# ----------------------------
+# ----------------------------------------
 
 # Playwright開始
 
-# ----------------------------
+# ----------------------------------------
 
 with sync_playwright() as p:
 
@@ -74,7 +72,7 @@ with sync_playwright() as p:
 
     page = browser.new_page(
 
-        viewport={"width": 1400, "height": 5000},
+        viewport={"width": 1400, "height": 3000},
 
         user_agent="Mozilla/5.0",
 
@@ -86,7 +84,7 @@ with sync_playwright() as p:
 
         STORE_URL,
 
-        wait_until="networkidle",
+        wait_until="domcontentloaded",
 
         timeout=60000,
 
@@ -98,83 +96,47 @@ with sync_playwright() as p:
 
     html = page.content()
 
-    with open("page.html", "w", encoding="utf-8") as f:
+    # ------------------------------------
 
-        f.write(html)
+    # レポート一覧URL取得
 
-    page.screenshot(
+    # ------------------------------------
 
-        path="page.png",
+    soup = BeautifulSoup(html, "lxml")
 
-        full_page=True,
+    report_url = ""
 
-    )
+    print("リンク検索開始")
 
-    print("店舗ページ保存完了")
+    for a in soup.find_all("a", href=True):
 
-    browser.close()
+        text = a.get_text(" ", strip=True)
 
-# ----------------------------
+        if "パチンコレポート一覧" in text:
 
-# HTML解析
+            report_url = a["href"]
 
-# ----------------------------
+            break
 
-soup = BeautifulSoup(html, "lxml")
+    print("レポート一覧URL")
 
-print("リンク検索開始")
+    print(report_url)
 
-report_url = ""
+    # URLが相対パスなら絶対URLへ変換
 
-for a in soup.find_all("a", href=True):
+    if report_url.startswith("/"):
 
-    text = a.get_text(" ", strip=True)
+        report_url = "https://min-repo.com" + report_url
 
-    if "パチンコレポート一覧" in text:
+    # ------------------------------------
 
-        report_url = a["href"]
+    # レポート一覧ページ
 
-        if report_url.startswith("/"):
+    # ------------------------------------
 
-            report_url = "https://min-repo.com" + report_url
+    rows = []
 
-        break
-
-print("レポート一覧URL")
-
-print(report_url)
-
-# ----------------------------
-
-# レポート一覧取得
-
-# ----------------------------
-
-days = []
-
-if report_url != "":
-
-    with sync_playwright() as p:
-
-        browser = p.chromium.launch(
-
-            headless=True,
-
-            args=[
-
-                "--no-sandbox",
-
-                "--disable-dev-shm-usage",
-
-            ],
-
-        )
-
-        page = browser.new_page(
-
-            viewport={"width": 1400, "height": 5000},
-
-        )
+    if report_url != "":
 
         print("レポート一覧へアクセス")
 
@@ -182,7 +144,7 @@ if report_url != "":
 
             report_url,
 
-            wait_until="networkidle",
+            wait_until="domcontentloaded",
 
             timeout=60000,
 
@@ -194,48 +156,48 @@ if report_url != "":
 
         html = page.content()
 
-        browser.close()
+        soup = BeautifulSoup(html, "lxml")
 
-    soup = BeautifulSoup(html, "lxml")
+        print("営業日一覧取得")
 
-    print("営業日一覧取得")
+        links = soup.find_all("a", href=True)
 
-    for a in soup.find_all("a", href=True):
+        for link in links:
 
-        text = a.get_text(" ", strip=True)
+            href = link.get("href", "")
 
-        if "/" in text and "(" in text:
+            text = link.get_text(" ", strip=True)
 
-            if text not in days:
+            if "/report/" in href:
 
-                days.append(text)
+                if href.startswith("/"):
 
-print("取得件数:", len(days))
+                    href = "https://min-repo.com" + href
 
-# ----------------------------
+                rows.append([text, href])
+
+        print("取得件数:", len(rows))
+
+    browser.close()
+
+# ----------------------------------------
 
 # Google Sheets保存
 
-# ----------------------------
+# ----------------------------------------
 
 sheet.clear()
 
 sheet.append_row([
 
-    "店舗",
+    "営業日",
 
-    "営業日"
+    "URL",
 
 ])
 
-for d in days:
+if rows:
 
-    sheet.append_row([
-
-        STORE_NAME,
-
-        d,
-
-    ])
+    sheet.append_rows(rows)
 
 print("保存完了")
