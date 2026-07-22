@@ -36,7 +36,7 @@ spreadsheet = gc.open_by_key(
 
 )
 
-# シート名を自分のスプレッドシートに合わせる
+# シート名
 
 sheet = spreadsheet.worksheet("データ収集")
 
@@ -60,7 +60,19 @@ with sync_playwright() as p:
 
     html = page.content()
 
+    # HTML保存
+
+    with open("page.html", "w", encoding="utf-8") as f:
+
+        f.write(html)
+
+    # HTML先頭をログ出力
+
+    print(html[:5000])
+
     browser.close()
+
+# HTML解析
 
 soup = BeautifulSoup(html, "lxml")
 
