@@ -10,6 +10,12 @@ import json
 
 import os
 
+# ==========================
+
+# Google認証
+
+# ==========================
+
 SCOPES = [
 
     "https://www.googleapis.com/auth/spreadsheets",
@@ -18,15 +24,11 @@ SCOPES = [
 
 ]
 
-# Google認証
-
-creds_info = json.loads(os.environ["GOOGLE_CREDENTIALS"])
-
 creds = Credentials.from_service_account_info(
 
-    creds_info,
+    json.loads(os.environ["GOOGLE_CREDENTIALS"]),
 
-    scopes=SCOPES
+    scopes=SCOPES,
 
 )
 
@@ -40,9 +42,19 @@ spreadsheet = gc.open_by_key(
 
 sheet = spreadsheet.worksheet("データ収集")
 
+# ==========================
+
 # 対象URL
 
-URL = "https://min-repo.com/tag/オーギヤdo/"
+# ==========================
+
+URL = "https://min-repo.com/tag/%E3%82%AA%E3%83%BC%E3%82%AE%E3%83%A4do/"
+
+# ==========================
+
+# Playwright
+
+# ==========================
 
 with sync_playwright() as p:
 
@@ -50,100 +62,104 @@ with sync_playwright() as p:
 
     page = browser.new_page(
 
-        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
+        viewport={"width": 1400, "height": 2000},
+
+        user_agent="Mozilla/5.0"
 
     )
 
-    page.goto(
-
-        URL,
-
-        wait_until="networkidle",
-
-        timeout=60000
-
-    )
-
-    # JavaScriptの読み込み待ち
+    page.goto(URL, wait_until="networkidle", timeout=60000)
 
     page.wait_for_timeout(5000)
 
-    print("現在のURL:", page.url)
-
-    print("ページタイトル:", page.title())
-
     html = page.content()
 
-    # HTML保存
+    print("取得URL :", page.url)
 
-    with open("page.html", "w", encoding="utf-8") as f:
+    print("タイトル :", page.title())
 
-        f.write(html)
-
-    # スクリーンショット保存
-
-    page.screenshot(path="page.png", full_page=True)
-
-    print("HTMLサイズ:", len(html))
-
-    print(html[:5000])
+    print("HTMLサイズ :", len(html))
 
     browser.close()
 
+# ==========================
+
 # HTML解析
+
+# ==========================
 
 soup = BeautifulSoup(html, "lxml")
 
-articles = []
+rows = []
 
-for article in soup.select("article"):
+# 全リンクを調査
 
-    link = article.find("a", href=True)
+for a in soup.find_all("a", href=True):
 
-    if not link:
+    href = a["href"]
 
-        continue
+    text = a.get_text(strip=True)
 
-    title = link.get_text(strip=True)
+    # min-repoの記事だけ取得
 
-    url = link["href"]
+    if href.startswith("https://min-repo.com/"):
 
-    date = ""
+        # タグやカテゴリ除外
 
-    t = article.find("time")
+        if "/tag/" in href:
 
-    if t:
+            continue
 
-        date = t.get_text(strip=True)
+        if "/category/" in href:
 
-    articles.append([
+            continue
 
-        date,
+        if text == "":
 
-        title,
+            continue
 
-        url
+        rows.append([
 
-    ])
+            text,
 
-print(f"{len(articles)}件取得")
+            href
+
+        ])
+
+# 重複削除
+
+unique = []
+
+seen = set()
+
+for r in rows:
+
+    if r[1] not in seen:
+
+        seen.add(r[1])
+
+        unique.append(r)
+
+print("取得件数:", len(unique))
+
+# ==========================
 
 # スプレッドシート保存
+
+# ==========================
 
 sheet.clear()
 
 sheet.append_row([
 
-    "日付",
-
-    "タイトル",
+    "店舗名",
 
     "URL"
 
 ])
 
-if articles:
+if unique:
 
-    sheet.append_rows(articles)
+    sheet.append_rows(unique)
 
 print("保存完了")
