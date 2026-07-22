@@ -18,6 +18,8 @@ SCOPES = [
 
 ]
 
+# Google認証
+
 creds_info = json.loads(os.environ["GOOGLE_CREDENTIALS"])
 
 creds = Credentials.from_service_account_info(
@@ -38,15 +40,13 @@ spreadsheet = gc.open_by_key(
 
 sheet = spreadsheet.worksheet("データ収集")
 
+# 対象URL
+
 URL = "https://min-repo.com/tag/%E3%82%AA%E3%83%BC%E3%82%AE%E3%82%B9/"
 
 with sync_playwright() as p:
 
-    browser = p.chromium.launch(
-
-        headless=True
-
-    )
+    browser = p.chromium.launch(headless=True)
 
     page = browser.new_page(
 
@@ -64,21 +64,33 @@ with sync_playwright() as p:
 
     )
 
-    # JavaScript読み込み待ち
+    # JavaScriptの読み込み待ち
 
     page.wait_for_timeout(5000)
 
     print("現在のURL:", page.url)
 
+    print("ページタイトル:", page.title())
+
     html = page.content()
+
+    # HTML保存
 
     with open("page.html", "w", encoding="utf-8") as f:
 
         f.write(html)
 
+    # スクリーンショット保存
+
+    page.screenshot(path="page.png", full_page=True)
+
+    print("HTMLサイズ:", len(html))
+
     print(html[:5000])
 
     browser.close()
+
+# HTML解析
 
 soup = BeautifulSoup(html, "lxml")
 
@@ -115,6 +127,8 @@ for article in soup.select("article"):
     ])
 
 print(f"{len(articles)}件取得")
+
+# スプレッドシート保存
 
 sheet.clear()
 
